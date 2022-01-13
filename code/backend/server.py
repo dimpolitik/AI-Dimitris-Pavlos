@@ -27,7 +27,7 @@ compress.init_app(app)
 limiter = Limiter(
     app,
     key_func=get_remote_address,
-    default_limits=["2000 per day", "500 per hour"]
+    default_limits=["2500 per day", "1800 per hour"]
 )
 # configuration
 # Using a development configuration
@@ -54,7 +54,7 @@ def fishtype():
 
 
 @app.route("/predict", methods=["GET", "POST"])
-@limiter.limit("150 per minute")
+@limiter.limit("50 per minute")
 def predict():
     try:
         fishtype = request.form['fishType']
@@ -96,8 +96,10 @@ def predict():
                     yhat = predictor["model"].predict(image)
                     yhat = np.exp(yhat)
                     yhat = yhat / yhat.sum()
+                    fish_pred = list(np.argmax(yhat, axis=1)+1)
                 else:
                     yhat,_ = predictor["model"].predict(image)
+                    fish_pred = list(np.argmax(yhat, axis=1))
                 
                 yhat = yhat.round(2)
                 
@@ -105,14 +107,17 @@ def predict():
                     lst_age = [0] * 5 
                     ind = np.int(yhat)
                     lst_age[ind] = 1
+                    fish_pred = ind
                     ret = [ {'x': c, 'y': y } for c, y in zip (predictor['age-groups'], lst_age) ]
                 elif (fishtype == "sea-salmon"):
                     lst_age = [0] * 8
                     ind = np.int(yhat)
                     lst_age[ind] = 1
+                    fish_pred = ind
                     ret = [ {'x': c, 'y': y } for c, y in zip (predictor['age-groups'], lst_age) ]     
                 else:
                     ret = [ {'x': c, 'y': y } for c, y in zip (predictor['age-groups'], yhat[0].tolist()) ]
+                    
                   
                 # cleanup
                 os.remove(path) 
